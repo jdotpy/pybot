@@ -67,6 +67,12 @@ class PyBot():
 
     def run(self):
         self.backend.start()
+        time.sleep(5)
+        users = self.get_users()
+        print('We got users!', users)
+
+    def get_users(self, room=None):
+        return self.backend.get_users(room=room)
 
     def shutdown(self):
         self.backend.shutdown()

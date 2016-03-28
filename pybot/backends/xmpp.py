@@ -13,7 +13,6 @@ class XMPPBackend(ClientXMPP):
         self.nick = nickname
         self.use_muc = muc
         self.rooms = rooms or []
-        self.ready = False
 
         ClientXMPP.__init__(self, jid, password)
 
@@ -61,18 +60,30 @@ class XMPPBackend(ClientXMPP):
         else:
             print('...ignoring unknown message type:', msg['type'])
 
+    def _parse_roster_query(self, result):
+        users = []
+        raw_user_items = result['roster']['items']
+        for username, user_data in raw_user_items.items():
+            users.append(User(
+                username=username,
+                name=user_data.get('name', ''),
+                data=user_data
+            ))
+        return users
+
     ## Begin PyBot backend support
     def start(self):
         self.connect()
         self.process(block=False)
-        self.ready = True
         for room in self.rooms:
             self.send_message(room, 'wazzzzzuuuuup boyz????')
 
     def get_users(self, room=None):
-        users = []
-        import pdb
-        pdb.set_trace()
+        if room is None:
+            roster = self.get_roster()
+        else:
+            roster = self.muc.rooms[room].get_roster()
+        users = self._parse_roster_query(roster)
         return users
 
     def shutdown(self):
