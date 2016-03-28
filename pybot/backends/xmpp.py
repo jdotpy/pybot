@@ -1,39 +1,46 @@
 from sleekxmpp import ClientXMPP
 from sleekxmpp.exceptions import IqError, IqTimeout
 
-from ..bot import Message
+from ..bot import Message, User
+import time
 
 class XMPPBackend(ClientXMPP):
-    MUC_MAXHISTORY = 0
+    MUC_MAXHISTORY = "0"
 
     def __init__(self, bot, user=None, password=None, server=None, nickname=None, muc=False, rooms=None):
         self.bot = bot
         jid = user + '@' + server
         self.nick = nickname
-        self.muc = muc
+        self.use_muc = muc
         self.rooms = rooms or []
+        self.ready = False
 
         ClientXMPP.__init__(self, jid, password)
 
-        if self.muc:
+        if self.use_muc:
             self.register_plugin('xep_0045')
+            self.muc = self['xep_0045']
 
         self.add_event_handler("session_start", self.session_start)
         self.add_event_handler("message", self.message)
 
     def session_start(self, event):
+        self.startup_timestamp = time.time()
         self.send_presence()
         self.get_roster()
 
         for room in self.rooms:
-            self['xep_0045'].joinMUC(room, self.nick, maxhistory=self.MUC_MAXHISTORY)
-            self.send_message(room, 'wazzzzzuuuuup boyz????')
+            self.muc.joinMUC(room, self.nick, maxhistory=self.MUC_MAXHISTORY)
 
     def message(self, msg):
-        if msg['type'] in ('chat', 'normal'):
-            msg_from = msg['nick']
-            msg_to = self.nick
-            content = str(msg)
+        ts = msg.xml.get('ts', None)
+        if ts and float(ts) < self.startup_timestamp:
+            pass
+            print('Ignoring old message: ', msg['body'])
+        elif msg['type'] in ('chat', 'normal'):
+            msg_from = msg['from'].bare
+            msg_to = msg['to'].bare
+            content = msg['body']
             self.bot.on_message(Message(
                 msg_from, 
                 msg_to, 
@@ -41,9 +48,9 @@ class XMPPBackend(ClientXMPP):
                 original=msg
             ))
         elif msg['type'] == 'groupchat':
-            content = str(msg)
             msg_from = msg['mucnick']
-            msg_to = str(msg['to']).split('/')[0]
+            msg_to = msg['to'].bare
+            content = msg['body']
             self.bot.on_message(Message(
                 msg_from, 
                 msg_to, 
@@ -58,6 +65,18 @@ class XMPPBackend(ClientXMPP):
     def start(self):
         self.connect()
         self.process(block=False)
+        self.ready = True
+        for room in self.rooms:
+            self.send_message(room, 'wazzzzzuuuuup boyz????')
+
+    def get_users(self, room=None):
+        users = []
+        import pdb
+        pdb.set_trace()
+        return users
+
+    def shutdown(self):
+        pass
 
     def send_message(self, recipient, content):
         if recipient in self['xep_0045'].rooms:

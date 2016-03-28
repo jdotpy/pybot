@@ -27,6 +27,25 @@ class Message():
     def is_group_message():
         return self.room is not None
 
+class User():
+    def __init__(self, username, name, data=None):
+        self.username = username
+        self.name = name
+        self.data = data or {}
+
+class Room():
+    def __init__(self, room_id, name, data=None):
+        self.room_id = room_id
+        self.name = name
+        self.data = data
+
+class BasePlugin():
+    def __init__(self, bot):
+        self.bot = bot
+
+    def process_message(self, message):
+        pass
+
 class PyBot():
     def __init__(self, config):
         self.config = config
@@ -40,16 +59,23 @@ class PyBot():
         return Backend(self, **backend_settings)
 
     def _load_plugins(self, config):
-        return []
+        plugins = []
+        for plugin_path in self.config.get('plugins', []):
+            Plugin= import_obj(plugin_path)
+            plugins.append(Plugin(self))
+        return plugins
 
     def run(self):
-        self.backend.connect()
-        self.backend.process(block=False)
-        time.sleep(10)
+        self.backend.start()
+
+    def shutdown(self):
+        self.backend.shutdown()
         sys.exit(0)
         
     def on_message(self, message):
         print('...on message :)', str(message))
+        for plugin in self.plugins:
+            plugin.process_message(message)    
 
     def send_message(self, recipient, content):
         self.backend.send_message(recipient, content)
