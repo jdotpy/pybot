@@ -1,8 +1,15 @@
 from ..bot import BasePlugin
 
-class CoreBotCommands(BasePlugin):
-    def process_message(self, message):
-        print('core', message.content)
+class Shutdown(BasePlugin):
+    hear_group = False
+
+    def hear(self, message):
         if message.content == 'shutdown':
-            print('....shutting down')
             self.bot.shutdown()
+
+class Testing(BasePlugin):
+    hear_regex = '^(\w+) .*'
+    hear_group = False
+
+    def hear(self, message, match=None):
+        self.bot.send_message(message.reply_to(), 'I done heard that! ' +  match.group(1))

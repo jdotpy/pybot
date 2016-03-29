@@ -13,6 +13,8 @@ class XMPPBackend(ClientXMPP):
         self.nick = nickname
         self.use_muc = muc
         self.rooms = rooms or []
+        self.users_by_username = {}
+        self.users_by_name = {}
 
         ClientXMPP.__init__(self, jid, password)
 
@@ -54,16 +56,16 @@ class XMPPBackend(ClientXMPP):
             content = msg['body']
         elif msg['type'] == 'groupchat':
             msg_from = self.users_by_name.get(msg['mucnick'], None)
-            msg_to = Room(msg['to'].bare)
+            room = Room(msg['from'].bare)
+            msg_to = room
             content = msg['body']
-            room = msg_to
         else:
             print('...ignoring unknown message type:', msg['type'])
             return None
 
         ## We don't process events that we send ourselves that could
         # get into some infinite loopiness
-        if msg_from == self.nick:
+        if msg_from == self.bot_user:
             print('...ignoring message sent by me:', msg['type'])
             return None
 
@@ -71,7 +73,7 @@ class XMPPBackend(ClientXMPP):
             msg_from, 
             msg_to, 
             content, 
-            room=msg_to,
+            room=room,
             original=msg
         ))
 
@@ -87,6 +89,16 @@ class XMPPBackend(ClientXMPP):
         return users
 
     ## Begin PyBot backend support
+    @property
+    def bot_user(self):
+        if hasattr(self, '_bot_user'):
+            return self._bot_user
+        for username, user in self.users_by_username.items():
+            if username.startswith(self.boundjid.username + '@'):
+                self._bot_user = user
+                return user
+        return User(self.boundjid.bare, self.nick)
+
     def start(self):
         self.connect()
         self.process(block=False)
@@ -126,5 +138,6 @@ class XMPPBackend(ClientXMPP):
         super(XMPPBackend, self).send_message(
             mto=recipient,
             mbody=content,
-            mtype=mtype
+            mtype=mtype,
+            mfrom=self.boundjid.bare
         )
