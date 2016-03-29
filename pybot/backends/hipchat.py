@@ -2,7 +2,7 @@ from .xmpp import XMPPBackend
 from ..bot import Message, User
 
 class HipchatBackend(XMPPBackend):
-    MUC_MAXHISTORY = 1 # Apparently this is as close to 0 as hipchat will let me get
+    MUC_MAXHISTORY = "1" # Apparently this is as close to 0 as hipchat will let me get
 
     def _parse_roster_query(self, result):
         users = []
