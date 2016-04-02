@@ -66,8 +66,9 @@ class BasePlugin():
     hear_group = True
     hear_regex = None
 
-    def __init__(self, bot):
+    def __init__(self, bot, settings):
         self.bot = bot
+        self.settings = settings
 
     def on_message(self, message):
         pass
@@ -87,9 +88,11 @@ class PyBot():
 
     def _load_plugins(self, config):
         plugins = []
-        for plugin_path in self.config.get('plugins', []):
-            Plugin= import_obj(plugin_path)
-            plugins.append(Plugin(self))
+        for plugin_path, plugin_settings in self.config.get('plugins', {}).items():
+            if plugin_settings == None:
+                plugin_settings = {}
+            Plugin = import_obj(plugin_path)
+            plugins.append(Plugin(self, plugin_settings))
         return plugins
 
     def _emit_plugin_event(self, event_name, *args, **kwargs):
