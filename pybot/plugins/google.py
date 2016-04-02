@@ -1,5 +1,4 @@
 from ..bot import BasePlugin
-import requests
 import random
 
 class GoogleCS(BasePlugin):
@@ -24,7 +23,7 @@ class GoogleCS(BasePlugin):
             params['fileType'] = 'gif'
 
         try:
-            response = requests.get('https://www.googleapis.com/customsearch/v1', params=params)
+            response = self.bot.web.get('https://www.googleapis.com/customsearch/v1', params=params)
             results = response.json()
         except Exception as e:
             self.bot.send_message(message.reply_to(), 'Googling error: ' + str(e))

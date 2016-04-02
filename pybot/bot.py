@@ -1,4 +1,5 @@
 import time
+import requests
 import sys
 from .utils import import_obj
 import re
@@ -79,6 +80,25 @@ class PyBot():
         self.backend = self._load_backend(config)
         self.plugins = self._load_plugins(config)
         self.bot_user = self.backend.bot_user
+        self.web = self.new_web_session()
+
+    def new_web_session(self):
+        session = requests.Session()
+
+        #  Proxy
+        http_proxy = self.config.get('web.http_proxy')
+        https_proxy = self.config.get('web.https_proxy')
+        proxies = {}
+        if http_proxy or https_proxy:
+            if http_proxy:
+                proxies['http'] = http_proxy
+            if https_proxy:
+                proxies['https'] = https_proxy
+        session.proxies = proxies
+
+        # Certs
+        session.verify = self.config.get('web.verify', True)
+        return session
 
     def _load_backend(self, config):
         backend_settings = self.config.get('backend', {}).copy()
