@@ -77,6 +77,7 @@ class BasePlugin():
 class PyBot():
     def __init__(self, config):
         self.config = config
+        self.memory = self._load_memory(config)
         self.backend = self._load_backend(config)
         self.plugins = self._load_plugins(config)
         self.bot_user = self.backend.bot_user
@@ -99,6 +100,12 @@ class PyBot():
         # Certs
         session.verify = self.config.get('web.verify', True)
         return session
+
+    def _load_memory(self, config):
+        memory_settings = self.config.get('memory', {}).copy()
+        memory_path = memory_settings.pop('path')
+        Memory = import_obj(memory_path)
+        return Memory(self, **memory_settings)
 
     def _load_backend(self, config):
         backend_settings = self.config.get('backend', {}).copy()

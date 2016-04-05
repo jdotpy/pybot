@@ -13,6 +13,7 @@ setup(
         'pybot',
         'pybot.backends',
         'pybot.plugins',
+        'pybot.storage',
     ],
     install_requires=[
         'sleekxmpp',
