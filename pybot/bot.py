@@ -1,5 +1,6 @@
 import time
 import requests
+import random
 import sys
 from .utils import import_obj
 import re
@@ -62,19 +63,8 @@ class Room(ChatEntity):
     def get_id(self):
         return self.room_id
 
-class BasePlugin():
-    hear_pm = True
-    hear_group = True
-    hear_regex = None
-
-    def __init__(self, bot, settings):
-        self.bot = bot
-        self.settings = settings
-
-    def on_message(self, message):
-        pass
-
 class PyBot():
+    DEFAULT_MEMORY = 'pybot.storage.memory.RAMStorage'
     def __init__(self, config):
         self.config = config
         self.memory = self._load_memory(config)
@@ -103,7 +93,7 @@ class PyBot():
 
     def _load_memory(self, config):
         memory_settings = self.config.get('memory', {}).copy()
-        memory_path = memory_settings.pop('path')
+        memory_path = memory_settings.pop('path', self.DEFAULT_MEMORY)
         Memory = import_obj(memory_path)
         return Memory(self, **memory_settings)
 
@@ -115,11 +105,12 @@ class PyBot():
 
     def _load_plugins(self, config):
         plugins = []
-        for plugin_path, plugin_settings in self.config.get('plugins', {}).items():
-            if plugin_settings == None:
-                plugin_settings = {}
-            Plugin = import_obj(plugin_path)
-            plugins.append(Plugin(self, plugin_settings))
+        for plugin_config in self.config.get('plugins', []):
+            path = plugin_config.pop('path')
+            if plugin_config == None:
+                plugin_config = {}
+            Plugin = import_obj(path)
+            plugins.append(Plugin(self, plugin_config))
         return plugins
 
     def _emit_plugin_event(self, event_name, *args, **kwargs):
@@ -133,25 +124,8 @@ class PyBot():
         self._emit_plugin_event('on_startup')
 
     def _on_message(self, message):
+        self._emit_plugin_event('on_message', message)
         # Hear events 
-        group = message.is_group_message()
-        if group:
-            hear_attribute = 'hear_group'
-        else:
-            hear_attribute = 'hear_pm'
-        for plugin in self.plugins:
-            if not getattr(plugin, hear_attribute):
-                print('Skipping plugin', plugin, 'hear attribute:', hear_attribute)
-                continue
-            if plugin.hear_regex is not None:
-                match = re.match(plugin.hear_regex, message.content)
-                if match is not None:
-                    plugin.hear(message, match)
-                else:
-                    print('skipping plugin', plugin, 'regex doesnt match')
-                    continue
-            else:
-                plugin.hear(message)
 
     def bot_user():
         return self.backend.bot_user

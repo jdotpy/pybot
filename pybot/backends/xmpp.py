@@ -39,9 +39,9 @@ class XMPPBackend(ClientXMPP):
     def message(self, msg):
         # Determine if this was a event sent to us at connect time
         # grace is subtracted from startup_timestampin order to 
-        # help prevent us from missing anything, and in case
-        # time gets out of sync
-        grace = 1
+        # help prevent us from missing anything, and allowing us to look
+        # back into message before we got here
+        grace = 10
         ts = msg.xml.get('ts', None)
         if ts and float(ts) < (self.startup_timestamp - grace):
             print('Ignoring old message: ', msg['body'])
@@ -114,8 +114,6 @@ class XMPPBackend(ClientXMPP):
                         break
                 if all_connected:
                     break
-        for room in self.rooms:
-            self.send_message(room, '/me is now fully operational')
 
     def get_users(self, room=None):
         if room is None:
