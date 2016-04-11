@@ -41,7 +41,7 @@ class XMPPBackend(ClientXMPP):
         # grace is subtracted from startup_timestampin order to 
         # help prevent us from missing anything, and allowing us to look
         # back into message before we got here
-        grace = 10
+        grace = 40
         ts = msg.xml.get('ts', None)
         if ts and float(ts) < (self.startup_timestamp - grace):
             print('Ignoring old message: ', msg['body'])

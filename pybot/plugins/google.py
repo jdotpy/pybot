@@ -4,6 +4,9 @@ import random
 class GoogleCS(HearMessagePlugin):
     hear_regex = '^google (?P<cmd>search|image|animate)(?P<random> random)? (?P<query>.*)'
 
+    def filter_results(self, results):
+        return results
+
     def google_search(self, message, query, search_type):
         params = {
             'key': self.options.get('key', ''),
@@ -24,7 +27,7 @@ class GoogleCS(HearMessagePlugin):
         if 'error' in results:
             self.bot.send_message(message.reply_to(), 'Googling error: ' + str(results['error']))
             return None
-        return results['items']
+        return self.filter_results(results['items'])
 
     def hear(self, message, match=None):
         search_type = match.group('cmd')
