@@ -4,7 +4,8 @@ import pickle
 
 class BaseRedisStorage():
     complex_values = False
-    def __init__(self, config):
+    def __init__(self, bot, **config):
+        self.bot = bot
         self.redis = redis.Redis(
             host=config.get('storage.host', 'localhost'),
             port=config.get('storage.port', 6379),

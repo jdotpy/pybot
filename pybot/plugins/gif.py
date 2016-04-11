@@ -27,31 +27,52 @@ class GoogleRandomGif(GoogleCS):
 
 class ImageBank(SimpleResponder):
     hear_regexes = [
+        r'^remove (?P<url>.{1,1000}) from (?P<name>\w{0,200})\.img$',
         r'^save (?P<url>.{1,1000}) as (?P<name>\w{0,200})\.img$',
-        r'\b(?P<name>\w{0,200})\.img\b'
+        r'\b(?P<name>\w{0,200})\.img\b',
+        r'\bclear (?P<name>\w{0,200})\.img\b',
+        r'\blist (?P<name>\w{0,200})\.img\b'
     ]
     memory_prefix = 'img-bank:'
 
     def hear(self, message, match=None):
         name = match.group('name')
+        memory_key = self.memory_prefix + name
         try:
             url = match.group('url')
         except Exception as e:
             url = None
 
         if url:
-            # This is a SET command
-            images = self.bot.memory.get(self.memory_prefix + name, [])
-            images.append(url)
-            self.bot.memory.set(self.memory_prefix + name, images)
-            return 'Saved. {}.img now has {} images.'.format(name, len(images))
-        else:
-            images = self.bot.memory.get(self.memory_prefix + name, [])
-            if len(images) == 0:
-                not_found = self.options.get('not_found')
-                if not_found:
-                    return not_found
+            if 'remove' in match.group(0):
+                # This is a DEL command
+                images = self.bot.memory.get(memory_key, [])
+                if url not in images:
+                    return 'Not in there.'
                 else:
-                    return False
-            url = random.choice(images)
-            return url
+                    images.remove(url)
+                    self.bot.memory.set(memory_key, images)
+                    return 'Removed.'
+            else:
+                # This is a SET command
+                images = self.bot.memory.get(memory_key, [])
+                images.append(url)
+                self.bot.memory.set(memory_key, images)
+                return 'Saved. {}.img now has {} images.'.format(name, len(images))
+        else:
+            if match.group(0).startswith('clear'):
+                self.bot.memory.set(memory_key, [])
+            elif match.group(0).startswith('list'):
+                images = self.bot.memory.get(memory_key, [])
+                return '\n'.join(images)
+            else:
+                # This is a GET
+                images = self.bot.memory.get(memory_key, [])
+                if len(images) == 0:
+                    not_found = self.options.get('not_found')
+                    if not_found:
+                        return not_found
+                    else:
+                        return False
+                url = random.choice(images)
+                return url
