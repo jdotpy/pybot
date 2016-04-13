@@ -73,12 +73,14 @@ class PyBot():
         self.bot_user = self.backend.bot_user
         self.web = self.new_web_session()
 
-    def new_web_session(self):
+    def new_web_session(self, **config_override):
+        web_config = self.config.get('web', {}).copy()
+        web_config.update(config_override)
         session = requests.Session()
 
         #  Proxy
-        http_proxy = self.config.get('web.http_proxy')
-        https_proxy = self.config.get('web.https_proxy')
+        http_proxy = web_config.get('http_proxy')
+        https_proxy = web_config.get('https_proxy')
         proxies = {}
         if http_proxy or https_proxy:
             if http_proxy:
@@ -88,7 +90,8 @@ class PyBot():
         session.proxies = proxies
 
         # Certs
-        session.verify = self.config.get('web.verify', True)
+        session.verify = web_config.get('verify', True)
+        session.keep_alive = web_config.get('keep_alive', True)
         return session
 
     def _load_memory(self, config):
