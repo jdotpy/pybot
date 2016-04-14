@@ -155,10 +155,12 @@ class PyBot():
             print('Retrying')
             try:
                 response = self.session.request(*args, **kwargs)
+                if i == 0:
+                    raise ValueError()
                 print('Got a response')
                 break
             except (
-                requests.exceptions.TooManyRediretsException,
+                requests.exceptions.TooManyRedirects,
                 requests.exceptions.URLRequired,
             ) as e:
                 # This are exceptions we dont want to execute a retry on
