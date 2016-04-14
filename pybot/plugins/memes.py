@@ -74,9 +74,11 @@ class ImgFlipMemeGen(SimpleResponder):
             'text0': line_one,
             'text1':line_two
         }
-        response = self.bot.web.get(self.base_url, params=params, verify=False)
-        results = response.json()
+        status_code, response = self.bot.web('GET', self.base_url, params=params, verify=False)
+        if not status_code:
+            return 'Error:' + str(response)
 
+        results = response.json()
         if not results['success']:
             return 'Error: ' + str(results)
         else:

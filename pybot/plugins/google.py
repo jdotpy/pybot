@@ -18,12 +18,12 @@ class GoogleCS(HearMessagePlugin):
             params['searchType'] = "image"
         if search_type == 'animate':
             params['fileType'] = 'gif'
-        try:
-            response = self.bot.web.get('https://www.googleapis.com/customsearch/v1', params=params)
-            results = response.json()
-        except Exception as e:
-            self.bot.send_message(message.reply_to(), 'Googling error: ' + str(e))
+
+        status_code, response = self.bot.web('GET', 'https://www.googleapis.com/customsearch/v1', params=params)
+        if not status_code:
+            self.bot.send_message(message.reply_to(), 'Googling error: ' + str(response))
             return None
+        results = response.json()
         if 'error' in results:
             self.bot.send_message(message.reply_to(), 'Googling error: ' + str(results['error']))
             return None

@@ -65,13 +65,14 @@ class Room(ChatEntity):
 
 class PyBot():
     DEFAULT_MEMORY = 'pybot.storage.memory.RAMStorage'
+
     def __init__(self, config):
         self.config = config
         self.memory = self._load_memory(config)
         self.backend = self._load_backend(config)
         self.plugins = self._load_plugins(config)
         self.bot_user = self.backend.bot_user
-        self.web = self.new_web_session()
+        self.session = self.new_web_session()
 
     def new_web_session(self, **config_override):
         web_config = self.config.get('web', {}).copy()
@@ -143,3 +144,32 @@ class PyBot():
 
     def send_message(self, recipient, content):
         self.backend.send_message(recipient, content)
+
+    def web(self, *args, **kwargs):
+        session = kwargs.pop('session', self.session)
+        attempts = kwargs.pop('attempts', 3)
+
+        response = None
+        exception = None
+        for i in range(attempts):
+            print('Retrying')
+            try:
+                response = self.session.request(*args, **kwargs)
+                print('Got a response')
+                break
+            except (
+                requests.exceptions.TooManyRediretsException,
+                requests.exceptions.URLRequired,
+            ) as e:
+                # This are exceptions we dont want to execute a retry on
+                print('Got a no-retry exception')
+                exception = e
+                break
+            except Exception as e:
+                print('Got a retry-able exception')
+                exception = e
+        if response:
+            return response.status_code, response
+        else:
+            return None, e
+
