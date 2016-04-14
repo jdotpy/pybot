@@ -154,9 +154,7 @@ class PyBot():
         for i in range(attempts):
             print('Retrying')
             try:
-                response = self.session.request(*args, **kwargs)
-                if i == 0:
-                    raise ValueError()
+                response = session.request(*args, **kwargs)
                 print('Got a response')
                 break
             except (
@@ -164,14 +162,14 @@ class PyBot():
                 requests.exceptions.URLRequired,
             ) as e:
                 # This are exceptions we dont want to execute a retry on
-                print('Got a no-retry exception')
+                print('Got a no-retry exception', e)
                 exception = e
                 break
             except Exception as e:
-                print('Got a retry-able exception')
+                print('Got a retry-able exception', e)
                 exception = e
         if response:
             return response.status_code, response
         else:
-            return None, e
+            return None, exception
 
