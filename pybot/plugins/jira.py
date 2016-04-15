@@ -39,4 +39,8 @@ class JiraHelpers(HearMessagePlugin):
             print('didnt find a ticket')
             return None
         ticket_url = self.base_url + '/browse/' + issue_id
-        return '{}\n{}'.format(ticket_url, results['fields']['summary'])
+        summary = results['fields']['summary']
+        status = results['fields']['status']['name']
+        issue_type = results['fields']['issuetype']['name']
+        assigned_to = results['fields']['assignee']['displayName']
+        return '[{} {}] {} @{}\n{}'.format(status, issue_type, summary, assigned_to, ticket_url)
