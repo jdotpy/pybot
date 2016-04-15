@@ -1,14 +1,9 @@
 from .core import HearMessagePlugin
 import requests
 
-class IssueMention(HearMessagePlugin):
-    hear_regexes = [
-        r'#(\d{1,6})( -v)?\b',
-        r'\b(\w{2,50}\-\d{1,6})( -v)?\b'
-    ]
-
+class JiraClient(HearMessagePlugin):
     def __init__(self, *args, **kwargs):
-        super(IssueMention, self).__init__(*args, **kwargs)
+        super(JiraClient, self).__init__(*args, **kwargs)
         self.base_url = self.options.get('url', None)
         self.default_project = self.options.get('default_project', None)
 
@@ -25,31 +20,27 @@ class IssueMention(HearMessagePlugin):
         results = response.json()
         return results
 
-    def hear(self, message, match=None):
-        issue_id = match.group(1)
-        verbose = ' -v' in match.groups()
-        if '-' not in issue_id:
-            if self.default_project:
-                issue_id = self.default_project + '-' + issue_id
-            else:
-                return None
-        results = self._execute('GET', '/rest/api/latest/issue/' + issue_id, data={
-            'expand': 'summary'
-        })
-        if results is None:
-            return None
-        ticket_url = self.base_url + '/browse/' + issue_id
-        summary = results['fields']['summary']
-        if results['fields']['description']:
-            details = '\n' + results['fields']['description']
+    def _issue_link(self, issue):
+        return self.base_url + '/browse/' + issue['key']
+
+    def _issue_display(self, issue, verbose=False):
+        summary = issue['fields']['summary']
+        if issue['fields']['description']:
+            details = '\n' + issue['fields']['description']
         else:
             details = ''
-        status = results['fields']['status']['name']
-        issue_type = results['fields']['issuetype']['name']
-        assigned_to = results['fields']['assignee']['displayName']
-        creator = results['fields']['creator']['displayName']
-        created = results['fields']['created'].replace('T', ' ')
-        comments = results['fields']['comment']['comments']
+        status = issue['fields']['status']['name']
+        issue_type = issue['fields']['issuetype']['name']
+        try:
+            assigned_to = issue['fields']['assignee']['displayName']
+        except Exception as e:
+            assigned_to = 'Nobody'
+        creator = issue['fields']['creator']['displayName']
+        created = issue['fields']['created'].replace('T', ' ')
+        try:
+            comments = issue['fields']['comment']['comments']
+        except Exception as e:
+            comments = []
         if comments:
             last_comment_date = comments[-1]['created'].replace('T', ' ')
         else:
@@ -59,8 +50,51 @@ class IssueMention(HearMessagePlugin):
                 status, issue_type, summary, 
                 creator, assigned_to, 
                 last_comment_date,
-                ticket_url,
+                self._issue_link(issue),
                 details
             )
         else:
-            return '[{} {}] {} @{}\n{}'.format(status, issue_type, summary, assigned_to, ticket_url)
+            return '[{} {}] {} @{}\n{}'.format(
+                status, issue_type, summary, assigned_to, 
+                self._issue_link(issue)
+            )
+
+class IssueMention(JiraClient):
+    hear_regexes = [
+        r'#(\d{1,6})( -v)?\b',
+        r'\b(\w{2,50}\-\d{1,6})( -v)?\b'
+    ]
+
+    def hear(self, message, match=None):
+        issue_id = match.group(1)
+        verbose = ' -v' in match.groups()
+        if '-' not in issue_id:
+            if self.default_project:
+                issue_id = self.default_project + '-' + issue_id
+            else:
+                return None
+        results = self._execute('GET', '/rest/api/2/issue/' + issue_id, data={
+            'expand': 'summary'
+        })
+        if results is None:
+            return None
+        return self._issue_display(results, verbose=verbose)
+
+class JiraSearch(JiraClient):
+    hear_regexes = [
+        r'jira search (.*)',
+    ]
+
+    def hear(self, message, match=None):
+        jql = match.group(1)
+        results = self._execute('GET', '/rest/api/2/search', data={
+            'jql': jql
+        })
+        if results is None:
+            return None
+        
+        result_displays = []
+        for issue in results['issues']:
+            result_displays.append(self._issue_display(issue))
+
+        return '\n\n'.join(result_displays)
