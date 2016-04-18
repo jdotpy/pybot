@@ -1,5 +1,6 @@
 from .core import HearMessagePlugin
 import requests
+import re
 
 class JiraClient(HearMessagePlugin):
     def __init__(self, *args, **kwargs):
@@ -65,20 +66,31 @@ class IssueMention(JiraClient):
         r'\b(\w{2,50}\-\d{1,6})( -v)?\b'
     ]
 
+    def _parse_ids(self, content):
+        lookups = []
+        for regex in self.hear_regexes:
+            for match in re.finditer(regex, content):
+                verbose = ' -v' in match.groups()
+                issue_id = match.group(1)
+                if '-' not in issue_id:
+                    if not self.default_project:
+                        continue
+                    issue_id = self.default_project + '-' + issue_id
+                lookups.append((issue_id, verbose))
+        return lookups
+
     def hear(self, message, match=None):
-        issue_id = match.group(1)
-        verbose = ' -v' in match.groups()
-        if '-' not in issue_id:
-            if self.default_project:
-                issue_id = self.default_project + '-' + issue_id
-            else:
-                return None
-        results = self._execute('GET', '/rest/api/2/issue/' + issue_id, data={
-            'expand': 'summary'
-        })
-        if results is None:
-            return None
-        return self._issue_display(results, verbose=verbose)
+        lookups = self._parse_ids(message.content)
+        for issue_id, verbose in lookups:
+            results = self._execute('GET', '/rest/api/2/issue/' + issue_id, data={
+                'expand': 'summary'
+            })
+            if results is None:
+                continue
+            self.bot.send_message(
+                message.reply_to(), 
+                self._issue_display(results, verbose=verbose)
+            )
 
 class JiraSearch(JiraClient):
     hear_regexes = [

@@ -8,7 +8,8 @@ class ChuckNorris(SimpleResponder):
         first_name, last_name = match.groups()
         params = {
             'firstName': first_name,
-            'lastName': last_name
+            'lastName': last_name,
+            'exclude': '[' + ','.join(self.options.get('exclude', [])) + ']'
         }
         result_code, response = self.bot.web('GET', self.base_url, params=params)
         if result_code:
