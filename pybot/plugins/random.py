@@ -38,17 +38,40 @@ class PickRandom(SimpleResponder):
 
 class DiceRoll(SimpleResponder):
     hear_regexes = [
-        '^roll (d\d+ ?)*$',
+        '^roll (\d{0,2}d\d{1,100}[+-]?\d* ?)*$',
     ]
     coins = ['Heads', 'Tails']
 
     def hear(self, message, match=None):
+        # Parse the dice
         dice = match.group(0)[4:].split(' ')
         dice = list(filter(lambda x: bool(x), dice))
         if len(dice) == 0:
             dice.append('d6')
+
+        # Roll 
         rolls = []
+        modifiers = []
         for die in dice:
-            result = random.randint(1, int(die[1:]))
-            rolls.append(str(result))
-        return ' '.join(rolls)
+            modifier = 0
+            count, size = die.split('d')
+            if '+' in size:
+                size, modifier = size.split('+')
+            elif '-' in size:
+                size, modifier = size.split('-')
+                modifier = '-' + modifier 
+            if modifier:
+                modifiers.append(int(modifier))
+            if not count:
+                count = 1
+            for i in range(int(count)):
+                rolls.append(random.randint(1, int(size)))
+
+        # Format
+        if len(rolls) == 1:
+            return str(rolls[0] + sum(modifiers))
+        else:
+            return '{} ({})'.format(
+                str(sum(rolls) + sum(modifiers)),
+                ', '.join([str(r) for r in rolls])       
+            )
