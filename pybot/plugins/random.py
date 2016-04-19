@@ -2,7 +2,10 @@ from .core import SimpleResponder
 import random
 
 class CoinFlip(SimpleResponder):
-    hear_regex = '^coin flip$'
+    hear_regexes = [
+        '^coin flip$',
+        '^flip coin$'
+    ]
     coins = ['Heads', 'Tails']
 
     def hear(self, message, match=None):
@@ -26,5 +29,26 @@ class PickRandom(SimpleResponder):
 
     def hear(self, message, match=None):
         params = match.group(2)
-        options = list(filter(lambda x: bool(x), params.split(',')))
+        if ',' in params:
+            options = params.split(',')
+        else:
+            options = params.split(' ')
+        options = list(filter(lambda x: bool(x), options))
         return random.choice(options)
+
+class DiceRoll(SimpleResponder):
+    hear_regexes = [
+        '^roll (d\d+ ?)*$',
+    ]
+    coins = ['Heads', 'Tails']
+
+    def hear(self, message, match=None):
+        dice = match.group(0)[4:].split(' ')
+        dice = list(filter(lambda x: bool(x), dice))
+        if len(dice) == 0:
+            dice.append('d6')
+        rolls = []
+        for die in dice:
+            result = random.randint(1, int(die[1:]))
+            rolls.append(str(result))
+        return ' '.join(rolls)
