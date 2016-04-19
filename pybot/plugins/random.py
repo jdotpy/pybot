@@ -1,5 +1,6 @@
 from .core import SimpleResponder
 import random
+import re
 
 class CoinFlip(SimpleResponder):
     hear_regexes = [
@@ -38,9 +39,25 @@ class PickRandom(SimpleResponder):
 
 class DiceRoll(SimpleResponder):
     hear_regexes = [
-        '^roll (\d{0,2}d\d{1,100}[+-]?\d* ?)*$',
+        '^roll ?(\d{0,2}d\d{1,100}[+-/*]?\d* ?)*$',
     ]
     coins = ['Heads', 'Tails']
+    die_regex = r'(?P<count>\d{0,2})d((?P<sides>\d{1,100})(?P<operator>[-+/*])?(?P<modifier>\d*)?)'
+
+    def _parse_die(self, text):
+        match = re.match(self.die_regex, text)
+        count = match.group('count')
+        if not count:
+            count = 1
+        else:
+            count = int(count)
+        operator = match.group('operator')
+        if not operator:
+            operator = None
+        modifier = match.group('modifier')
+        if not modifier:
+            modifier = '0'
+        return count, int(match.group('sides')), operator, int(modifier)
 
     def hear(self, message, match=None):
         # Parse the dice
@@ -51,27 +68,30 @@ class DiceRoll(SimpleResponder):
 
         # Roll 
         rolls = []
-        modifiers = []
+        total = 0
         for die in dice:
-            modifier = 0
-            count, size = die.split('d')
-            if '+' in size:
-                size, modifier = size.split('+')
-            elif '-' in size:
-                size, modifier = size.split('-')
-                modifier = '-' + modifier 
-            if modifier:
-                modifiers.append(int(modifier))
-            if not count:
-                count = 1
-            for i in range(int(count)):
-                rolls.append(random.randint(1, int(size)))
+            die_sum = 0
+            count, sides, operator, modifier = self._parse_die(die)
+            for i in range(count):
+                die_roll = random.randint(1, int(sides))
+                die_sum += die_roll
+                rolls.append(die_roll)
+            if operator:
+                if operator == '+':
+                    die_sum += modifier
+                elif operator == '-':
+                    die_sum -= modifier
+                elif operator == '/':
+                    die_sum = int(die_sum / modifier)
+                elif operator == '*':
+                    die_sum = die_sum * modifier
+            total += die_sum
 
         # Format
         if len(rolls) == 1:
-            return str(rolls[0] + sum(modifiers))
+            return str(total)
         else:
             return '{} ({})'.format(
-                str(sum(rolls) + sum(modifiers)),
+                str(total),
                 ', '.join([str(r) for r in rolls])       
             )
