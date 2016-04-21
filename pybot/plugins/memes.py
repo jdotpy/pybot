@@ -10,15 +10,15 @@ class ImgFlipMemeGen(SimpleResponder):
 
     meme_types = [
         {
-          'regex': 'Y U NO (.*)',
+          'regex': '(Y U NO .*)',
           'template': 61527
         },
         {
-          'regex': "I DON'?T ALWAYS (.*) BUT WHEN I DO (.*)",
+          'regex': "(I DON'?T ALWAYS .*) (BUT WHEN I DO .*)",
           'template': 61532
         },
         {
-          'regex': '(.*) (SUCCESS|NAILED IT.*)',
+          'regex': '(.*) ?(SUCCESS|NAILED IT.*)',
           'template': 61544
         },
         {
@@ -38,7 +38,7 @@ class ImgFlipMemeGen(SimpleResponder):
           'template': 61520
         },
         {
-          'regex': '(YO DAWG .*) (SO .*)',
+          'regex': '(YO DAWG) (.*)',
           'template': 101716
         },
         #{
@@ -58,11 +58,15 @@ class ImgFlipMemeGen(SimpleResponder):
           'template': 259680
         },
         {
-          'regex': '(PREPARE YOURSELF) (.*)',
+          'regex': '(PREPARE|BRACE YOURSELF|YOURSELVES) (.*)',
           'template': 61546
         },
         {
           'regex': '(WHAT IF I TOLD YOU) (.*)',
+          'template': 100947
+        },
+        {
+          'regex': '(.*),? (.* EVERYWHERE)',
           'template': 100947
         },
     ]

@@ -61,14 +61,17 @@ class JiraClient(HearMessagePlugin):
             )
 
 class IssueMention(JiraClient):
+    patterns = [
+        r'#(\d{1,6})( -v)?',
+        r'(\w{2,50}\-\d{1,6})( -v)?'
+    ]
     hear_regexes = [
-        r'#(\d{1,6})( -v)?\b',
-        r'\b(\w{2,50}\-\d{1,6})( -v)?\b'
+        r'.*' + pattern for pattern in patterns
     ]
 
     def _parse_ids(self, content):
         lookups = []
-        for regex in self.hear_regexes:
+        for regex in self.patterns:
             for match in re.finditer(regex, content):
                 verbose = ' -v' in match.groups()
                 issue_id = match.group(1)
