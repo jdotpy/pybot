@@ -10,7 +10,7 @@ class ImgFlipMemeGen(SimpleResponder):
 
     meme_types = [
         {
-          'regex': '(Y U NO .*)',
+          'regex': '(.*) (Y U NO .*)',
           'template': 61527
         },
         {

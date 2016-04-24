@@ -18,12 +18,14 @@ class XMPPBackend(ClientXMPP):
 
         ClientXMPP.__init__(self, jid, password)
 
+        self.add_event_handler("session_start", self.session_start)
+        self.add_event_handler("message", self.message)
+
         if self.use_muc:
             self.register_plugin('xep_0045')
             self.muc = self['xep_0045']
-
-        self.add_event_handler("session_start", self.session_start)
-        self.add_event_handler("message", self.message)
+            self.add_event_handler("groupchat_invite", self._groupchat_invite)
+            self.add_event_handler("groupchat_presence", self._groupchat_presence)
 
     def session_start(self, event):
         self.startup_timestamp = time.time()
@@ -88,6 +90,21 @@ class XMPPBackend(ClientXMPP):
             ))
         return users
 
+    def _parse_room(self, obj):
+        import pdb
+        pdb.set_trace()
+        return Room(
+            username=username,
+            data=obj
+        )
+
+    def _groupchat_invite(self, inv):
+        self.muc.joinMUC(inv['from'], self.nick, maxhistory=self.MUC_MAXHISTORY)
+
+    def _groupchat_presence(self, pr):
+        if pr['nick'] == self.nick:
+            self.latest_presence = pr
+
     ## Begin PyBot backend support
     @property
     def bot_user(self):
@@ -122,6 +139,10 @@ class XMPPBackend(ClientXMPP):
             roster = self.muc.rooms[room].get_roster()
         users = self._parse_roster_query(roster)
         return users
+
+    def get_rooms(self):
+        room_data = self.muc.rooms
+        return [Room(key) for key in room_data]
 
     def shutdown(self):
         pass
