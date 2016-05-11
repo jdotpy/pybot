@@ -1,5 +1,6 @@
 from .core import HearMessagePlugin
 import requests
+import json
 import re
 
 class JiraClient(HearMessagePlugin):
@@ -7,6 +8,7 @@ class JiraClient(HearMessagePlugin):
         super(JiraClient, self).__init__(*args, **kwargs)
         self.base_url = self.options.get('url', None)
         self.default_project = self.options.get('default_project', None)
+        self.default_issue_type = self.options.get('default_issue_type', "Story")
 
     def _execute(self, method, path, data=None):
         auth = (self.options.get('user', ''), self.options.get('password', ''))
@@ -15,11 +17,23 @@ class JiraClient(HearMessagePlugin):
         if method == 'GET':
             status_code, response = self.bot.web(method, self.base_url + path, params=data, verify=False, auth=auth, session=session)
         else:
-            status_code, response = self.bot.web(method, self.base_url + path, data=params, verify=False, auth=auth, session=session)
+            data = json.dumps(data)
+            headers= {'Content-Type': 'application/json'}
+            status_code, response = self.bot.web(method, self.base_url + path, data=data, verify=False, auth=auth, session=session, headers=headers)
         if not status_code:
             return None
         results = response.json()
         return results
+
+    def _lookup(self, message, issue_id, verbose=False):
+        results = self._execute('GET', '/rest/api/2/issue/' + issue_id, data={
+            'expand': 'summary'
+        })
+        if results:
+            self.bot.send_message(
+                message.reply_to(), 
+                self._issue_display(results, verbose=verbose)
+            )
 
     def _issue_link(self, issue):
         return self.base_url + '/browse/' + issue['key']
@@ -60,6 +74,9 @@ class JiraClient(HearMessagePlugin):
                 self._issue_link(issue)
             )
 
+    def get_jira_user(self, user):
+        return {"name": user.name}
+
 class IssueMention(JiraClient):
     patterns = [
         r'#(\d{1,6})( -v)?',
@@ -82,18 +99,11 @@ class IssueMention(JiraClient):
                 lookups.append((issue_id, verbose))
         return lookups
 
+
     def hear(self, message, match=None):
         lookups = self._parse_ids(message.content)
         for issue_id, verbose in lookups:
-            results = self._execute('GET', '/rest/api/2/issue/' + issue_id, data={
-                'expand': 'summary'
-            })
-            if results is None:
-                continue
-            self.bot.send_message(
-                message.reply_to(), 
-                self._issue_display(results, verbose=verbose)
-            )
+            self._lookup(message, issue_id, verbose=verbose)
 
 class JiraSearch(JiraClient):
     hear_regexes = [
@@ -113,3 +123,22 @@ class JiraSearch(JiraClient):
             result_displays.append(self._issue_display(issue))
 
         return '\n\n'.join(result_displays)
+
+class CreateTicket(JiraClient):
+    hear_regexes = [
+        r'assign me (.*)',
+    ]
+
+    def hear(self, message, match=None):
+        summary = match.group(1)
+        results = self._execute('POST', '/rest/api/2/issue', data={
+            "fields": {
+                'project': {"key": self.default_project},
+                'issuetype': {"name": self.default_issue_type},
+                'summary': summary,
+                'assignee': self.get_jira_user(message.sender)
+            }
+        })
+        self._lookup(message, results['key'])
+
+

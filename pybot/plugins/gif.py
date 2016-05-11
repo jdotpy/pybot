@@ -5,7 +5,7 @@ import re
 import random
 
 class GoogleRandomGif(GoogleCS):
-    hear_regex = r'\b(\w{1,200})\.gif\b'
+    hear_regex = r'.*\b(\w{1,200})\.gif\b'
 
     def giphy_check(self, link):
         if '.giphy.com' in link and link.endswith('_s.gif'):

@@ -152,10 +152,8 @@ class PyBot():
         response = None
         exception = None
         for i in range(attempts):
-            print('Retrying')
             try:
                 response = session.request(*args, **kwargs)
-                print('Got a response')
                 break
             except (
                 requests.exceptions.TooManyRedirects,
