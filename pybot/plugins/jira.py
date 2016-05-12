@@ -12,7 +12,7 @@ class JiraClient(HearMessagePlugin):
 
     def _execute(self, method, path, data=None):
         auth = (self.options.get('user', ''), self.options.get('password', ''))
-        session = requests.Session()
+        session = self.bot.new_web_session()
         session.proxies = {}
         if method == 'GET':
             status_code, response = self.bot.web(method, self.base_url + path, params=data, verify=False, auth=auth, session=session)

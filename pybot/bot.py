@@ -78,6 +78,7 @@ class PyBot():
         web_config = self.config.get('web', {}).copy()
         web_config.update(config_override)
         session = requests.Session()
+        session.trust_env = web_config.get('trust_env', True)
 
         #  Proxy
         http_proxy = web_config.get('http_proxy')
